@@ -3,6 +3,7 @@ from fastapi.responses import HTMLResponse
 from fastapi.staticfiles import StaticFiles
 from starlette.websockets import WebSocketDisconnect
 
+
 app = FastAPI()
 
 # Mount the directory containing the HTML file as a static files directory
@@ -24,4 +25,4 @@ async def websocket_endpoint(websocket: WebSocket):
 
 if __name__ == "__main__":
     import uvicorn
-    uvicorn.run(app, host="0.0.0.0", port=8000)
+    uvicorn.run('app:app', host="0.0.0.0", port=8888, reload=True, ssl_keyfile="./key.pem", ssl_certfile="./cert.pem")

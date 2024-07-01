@@ -2,7 +2,7 @@ const micButton = document.getElementById('micBtn');
 const micIcon = document.getElementById('micIcon');
 const transcriptionDiv = document.getElementById('transcription');
 
-let ws = new WebSocket('ws://localhost:8000/speech-query');
+let ws = new WebSocket('wss://' + location.hostname + ':8888/speech-query');
 let recording = false;
 let transcriptCharIdx = 0
 
@@ -45,6 +45,8 @@ recognition.onresult = function(event) {
 
 recognition.onerror = function(event) {
     console.error('Speech recognition error:', event.error);
+    recording = false;
+    recognition.stop();
 };
 
 recognition.onstart = function() {
