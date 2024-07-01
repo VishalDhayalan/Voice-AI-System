@@ -2,7 +2,15 @@ from fastapi import FastAPI, WebSocket
 from fastapi.responses import HTMLResponse
 from fastapi.staticfiles import StaticFiles
 from starlette.websockets import WebSocketDisconnect
+from pyaudio import PyAudio
 
+audio = PyAudio()
+stream = audio.open(
+    format = audio.get_format_from_width(2),    # 16-bit PCM audio
+    channels = 1,                               # Mono audio
+    rate = 44100,
+    output = True
+)
 
 app = FastAPI()
 
@@ -18,8 +26,8 @@ async def websocket_endpoint(websocket: WebSocket):
     await websocket.accept()
     try:
         while True:
-            transcript = await websocket.receive_text()
-            print(transcript, end="", flush=True)
+            blob = await websocket.receive_bytes()
+            stream.write(blob)
     except WebSocketDisconnect:
         print("Client disconnected")
 

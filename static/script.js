@@ -1,73 +1,63 @@
 const micButton = document.getElementById('micBtn');
 const micIcon = document.getElementById('micIcon');
 const transcriptionDiv = document.getElementById('transcription');
-
-let ws = new WebSocket('wss://' + location.hostname + ':8888/speech-query');
 let recording = false;
-let transcriptCharIdx = 0
+let stream;
+let mediaRecorder;
+let ws = new WebSocket('wss://' + location.hostname + ':8888/speech-query');
 
-recognition = new window.webkitSpeechRecognition();
-recognition.lang = 'en-US';
-recognition.interimResults = true;
-recognition.continuous = true;
-
-recognition.onresult = function(event) {
-    console.log(event.results)
-    let result = '';
-    let curCharIdx = 0;
-    let i = 0;
-
-    // Skip all results that have already been streamed (i.e. everything up to `transcriptCharIdx`).
-    while (
-        i < event.results.length
-        &&
-        curCharIdx + event.results[i][0].transcript.length < transcriptCharIdx
-    ) {
-        curCharIdx += event.results[i][0].transcript.length;
-        i += 1;
-    }
-
-    // Get only portion of results that is new (i.e. `transcriptCharIdx` onwards).
-    if (i < event.results.length) {
-        result += event.results[i][0].transcript.slice(transcriptCharIdx - curCharIdx)
-        i += 1
-        while (i < event.results.length) {
-            result += event.results[i][0].transcript
-            i += 1
+// Function to get microphone access and handle errors in this process
+async function getMicAccess() {
+    try {
+        return await navigator.mediaDevices.getUserMedia({ audio: true });
+    } catch (error) {
+        if (error.name === 'NotAllowedError' || error.name === 'PermissionDeniedError') {
+            alert('Microphone access is required for this app.');
+        } else if (error.name === 'NotFoundError' || error.name === 'DevicesNotFoundError') {
+            alert('No microphone device found. Please connect a microphone and try again.');
+        } else {
+            alert('An unexpected error occurred while trying to access the microphone.');
         }
+        throw error;
     }
-
-    // Append to user transcript textbox and send to backend via websocket.
-    transcriptCharIdx += result.length
-    transcriptionDiv.textContent += result;
-    ws.send(result);
-};
-
-recognition.onerror = function(event) {
-    console.error('Speech recognition error:', event.error);
-    recording = false;
-    recognition.stop();
-};
-
-recognition.onstart = function() {
-    // STT started. Reset transcription index and add 'recording mode' styling for button.
-    transcriptCharIdx = 0;
-    micIcon.classList.add('fa-beat-fade')
-    micIcon.classList.add('recording')
 }
 
-recognition.onend = function() {
-    // STT ended. Remove 'recording mode' styling for button.
-    micIcon.classList.remove('fa-beat-fade')
-    micIcon.classList.remove('recording')
-}
+ws.onmessage = (event) => {
+    const transcription = event.data;
+    transcriptionDiv.innerHTML += transcription + '<br>';
+};
 
 micButton.onclick = async () => {
-    if (recording) {
-        recognition.stop();
+    if (!recording) {
+        // Get access to client mic stream and start recording audio chunks
+        stream = await getMicAccess();
+    }
+
+    // Toggle animations between recording and not recording states.
+    micIcon.classList.toggle('fa-beat-fade')
+    micIcon.classList.toggle('recording')
+
+    if (!recording) {
+        recording = true;
+        mediaRecorder = new MediaStreamRecorder(stream);
+        mediaRecorder.audioChannels = 1;
+        mediaRecorder.mimeType = 'audio/pcm';
+
+        mediaRecorder.ondataavailable = (blob) => {
+            ws.send(blob);
+        };
+
+        mediaRecorder.start(1000);  // Send data every second
     }
     else {
-        recognition.start();
+        recording = false;
+        mediaRecorder.stop();
+
+        // Stop audio track in stream to release the microphone.
+        stream.getTracks().forEach((track) => {
+            if (track.readyState == 'live') {
+                track.stop();
+            }
+        });
     }
-    recording = !recording
-}
+};
