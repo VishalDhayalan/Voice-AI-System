@@ -1,46 +1,38 @@
 const micButton = document.getElementById('micBtn');
 const micIcon = document.getElementById('micIcon');
-const transcriptionDiv = document.getElementById('transcription');
+const transcriptionArea = document.getElementById('transcript');
 
 let ws = new WebSocket('wss://' + location.hostname + ':8888/speech-query');
 let recording = false;
-let transcriptCharIdx = 0
+
+function keepTranscriptInView() {
+    transcriptionArea.scrollTop = transcriptionArea.scrollHeight;
+}
+
+const observer = new MutationObserver(keepTranscriptInView);
+observer.observe(transcriptionArea, {attributes: true, childList: true, subtree: true})
+
+ws.onmessage = (response) => {
+    if (response.data === "<start>") {
+        transcriptionArea.textContent += "\n\nAI:\n";
+    }
+    else {
+        transcriptionArea.textContent += response.data;
+    }
+};
 
 recognition = new window.webkitSpeechRecognition();
 recognition.lang = 'en-US';
-recognition.interimResults = true;
+recognition.interimResults = false;
 recognition.continuous = true;
 
 recognition.onresult = function(event) {
-    console.log(event.results)
-    let result = '';
-    let curCharIdx = 0;
-    let i = 0;
-
-    // Skip all results that have already been streamed (i.e. everything up to `transcriptCharIdx`).
-    while (
-        i < event.results.length
-        &&
-        curCharIdx + event.results[i][0].transcript.length < transcriptCharIdx
-    ) {
-        curCharIdx += event.results[i][0].transcript.length;
-        i += 1;
-    }
-
-    // Get only portion of results that is new (i.e. `transcriptCharIdx` onwards).
-    if (i < event.results.length) {
-        result += event.results[i][0].transcript.slice(transcriptCharIdx - curCharIdx)
-        i += 1
-        while (i < event.results.length) {
-            result += event.results[i][0].transcript
-            i += 1
-        }
-    }
+    console.log(event.results);
 
     // Append to user transcript textbox and send to backend via websocket.
-    transcriptCharIdx += result.length
-    transcriptionDiv.textContent += result;
-    ws.send(result);
+    transcript = event.results[event.results.length - 1][0].transcript;
+    transcriptionArea.textContent += transcript;
+    ws.send(transcript);
 };
 
 recognition.onerror = function(event) {
@@ -50,17 +42,22 @@ recognition.onerror = function(event) {
 };
 
 recognition.onstart = function() {
-    // STT started. Reset transcription index and add 'recording mode' styling for button.
-    transcriptCharIdx = 0;
-    micIcon.classList.add('fa-beat-fade')
-    micIcon.classList.add('recording')
-}
+    // STT started. Add 'recording mode' styling for button.
+    micIcon.classList.add('fa-beat-fade');
+    micIcon.classList.add('recording');
+
+    if (transcriptionArea.textContent !== "") {
+        transcriptionArea.textContent += "\n\n"
+    }
+    transcriptionArea.textContent += "Me:\n";
+};
 
 recognition.onend = function() {
     // STT ended. Remove 'recording mode' styling for button.
-    micIcon.classList.remove('fa-beat-fade')
-    micIcon.classList.remove('recording')
-}
+    micIcon.classList.remove('fa-beat-fade');
+    micIcon.classList.remove('recording');
+    ws.send("<end>");
+};
 
 micButton.onclick = async () => {
     if (recording) {
@@ -69,5 +66,5 @@ micButton.onclick = async () => {
     else {
         recognition.start();
     }
-    recording = !recording
-}
+    recording = !recording;
+};
