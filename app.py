@@ -1,14 +1,63 @@
+from dataclasses import dataclass, field
+from dotenv import load_dotenv
+
 from fastapi import FastAPI, WebSocket, WebSocketDisconnect
 from fastapi.responses import HTMLResponse
 from fastapi.staticfiles import StaticFiles
 
+from langchain_core.output_parsers import StrOutputParser
+from langchain_core.prompts import ChatPromptTemplate
+from langchain_core.runnables.history import RunnableWithMessageHistory
+from langchain_core.runnables.utils import ConfigurableFieldSpec
+from langchain_community.chat_message_histories import ChatMessageHistory
+from langchain_openai import ChatOpenAI
+
+load_dotenv()
+
+@dataclass
+class UserData:
+    # String to build the current transcript using streamed chunks of text from STT.
+    transcription: str = ""
+    # The message history of the user, for a conversational AI experience with memory.
+    messageHistory: ChatMessageHistory = field(default_factory=ChatMessageHistory)
+
+# A simpler alternative to in-memory DBs or session variables for our use case.
+users: dict[WebSocket, UserData] = {}
+
+def get_chat_history(user_socket: WebSocket):
+    return users[user_socket].messageHistory
+
+# Set up a chain with prompt, LLM model and output parsing. This chain is run with message history.
+prompt_template = ChatPromptTemplate.from_messages(
+    [
+        ("placeholder", "{history}"),
+        ("human", "{query}"),
+    ]
+)
+llm = ChatOpenAI(model="gpt-3.5-turbo")
+output_parser = StrOutputParser()
+chain = prompt_template | llm | output_parser
+chat = RunnableWithMessageHistory(
+    chain,
+    get_chat_history,
+    input_messages_key="query",
+    history_messages_key="history",
+    history_factory_config=[
+        ConfigurableFieldSpec(
+            id="user_socket",
+            annotation=WebSocket,
+        )
+    ]
+)
+
+# Stream response from LLM for the user's transcript.
+async def get_response(user_socket: WebSocket):
+    async for text in chat.astream({"query": users[user_socket].transcription}, {"configurable": {"user_socket": user_socket}}):
+        yield text
+
 app = FastAPI()
 
-# Maintain current prompt of users. A simpler alternative to in-memory DBs and session variables in this case.
-# This prompt is built via concatenation of STT chunks streamed from the frontend.
-user_prompt: dict[WebSocket, str] = {}
-
-# Mount the directory containing the HTML file as a static files directory
+# Mount directory containing static files to be served.
 app.mount("/static", StaticFiles(directory="static"), "static")
 
 @app.get("/")
@@ -19,19 +68,27 @@ async def get():
 @app.websocket("/speech-query")
 async def websocket_endpoint(websocket: WebSocket):
     await websocket.accept()
+    users[websocket] = UserData()
+    
     try:
         while True:
             transcript_chunk = await websocket.receive_text()
             if transcript_chunk == "<end>":
-                # Send to LLM
-                print(f"\nSENDING TO LLM!\n{user_prompt[websocket]}", flush=True)
+                # Stream LLM response for the user's transcript via the websocket to frontend.
+                print(f"\nSENDING TO LLM!\n{users[websocket].transcription}\n", flush=True)
+                async for text in get_response(websocket):
+                    print(text, end="", flush=True)
+                    await websocket.send_text(text)
+                await websocket.send_text("<end>")
+                # Clear the transcript
+                users[websocket].transcription = ""
             else:
-                # Append transcript to user's current prompt, creating an item for the prompt only when the first chunk is received.
-                user_prompt[websocket] = user_prompt.get(websocket, "") + transcript_chunk
+                # Append transcript to user's current prompt.
+                users[websocket].transcription += transcript_chunk
                 print(transcript_chunk, end="", flush=True)
     except WebSocketDisconnect:
         print("Client disconnected")
-        del user_prompt[websocket]
+        del users[websocket]
 
 if __name__ == "__main__":
     import uvicorn
