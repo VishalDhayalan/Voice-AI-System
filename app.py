@@ -76,10 +76,10 @@ async def websocket_endpoint(websocket: WebSocket):
             if transcript_chunk == "<end>":
                 # Stream LLM response for the user's transcript via the websocket to frontend.
                 print(f"\nSENDING TO LLM!\n{users[websocket].transcription}\n", flush=True)
+                await websocket.send_text("<start>")
                 async for text in get_response(websocket):
                     print(text, end="", flush=True)
                     await websocket.send_text(text)
-                await websocket.send_text("<end>")
                 # Clear the transcript
                 users[websocket].transcription = ""
             else:
