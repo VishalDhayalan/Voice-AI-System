@@ -75,17 +75,14 @@ async def websocket_endpoint(websocket: WebSocket):
             transcript_chunk = await websocket.receive_text()
             if transcript_chunk == "<end>":
                 # Stream LLM response for the user's transcript via the websocket to frontend.
-                print(f"\nSENDING TO LLM!\n{users[websocket].transcription}\n", flush=True)
                 await websocket.send_text("<start>")
                 async for text in get_response(websocket):
-                    print(text, end="", flush=True)
                     await websocket.send_text(text)
                 # Clear the transcript
                 users[websocket].transcription = ""
             else:
                 # Append transcript to user's current prompt.
                 users[websocket].transcription += transcript_chunk
-                print(transcript_chunk, end="", flush=True)
     except WebSocketDisconnect:
         print("Client disconnected")
         del users[websocket]
