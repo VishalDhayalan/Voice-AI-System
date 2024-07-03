@@ -1,16 +1,23 @@
 const micButton = document.getElementById('micBtn');
 const micIcon = document.getElementById('micIcon');
-const transcriptionDiv = document.getElementById('transcript');
+const transcriptionArea = document.getElementById('transcript');
 
 let ws = new WebSocket('wss://' + location.hostname + ':8888/speech-query');
 let recording = false;
 
+function keepTranscriptInView() {
+    transcriptionArea.scrollTop = transcriptionArea.scrollHeight;
+}
+
+const observer = new MutationObserver(keepTranscriptInView);
+observer.observe(transcriptionArea, {attributes: true, childList: true, subtree: true})
+
 ws.onmessage = (response) => {
     if (response.data === "<start>") {
-        transcriptionDiv.textContent += "\n\nAI:\n";
+        transcriptionArea.textContent += "\n\nAI:\n";
     }
     else {
-        transcriptionDiv.textContent += response.data;
+        transcriptionArea.textContent += response.data;
     }
 };
 
@@ -24,7 +31,7 @@ recognition.onresult = function(event) {
 
     // Append to user transcript textbox and send to backend via websocket.
     transcript = event.results[event.results.length - 1][0].transcript;
-    transcriptionDiv.textContent += transcript;
+    transcriptionArea.textContent += transcript;
     ws.send(transcript);
 };
 
@@ -39,10 +46,10 @@ recognition.onstart = function() {
     micIcon.classList.add('fa-beat-fade');
     micIcon.classList.add('recording');
 
-    if (transcriptionDiv.textContent !== "") {
-        transcriptionDiv.textContent += "\n\n"
+    if (transcriptionArea.textContent !== "") {
+        transcriptionArea.textContent += "\n\n"
     }
-    transcriptionDiv.textContent += "Me:\n";
+    transcriptionArea.textContent += "Me:\n";
 };
 
 recognition.onend = function() {

@@ -8,10 +8,6 @@ body {
     text-align: center;
 }
 
-h1 {
-    margin-bottom: 10vh;
-}
-
 .center-container {
     display: flex;
     flex-direction: column;
@@ -34,13 +30,16 @@ h1 {
 }
 
 .round-button i {
-    font-size: min(15vw, 8em);
+    font-size: min(15vw, 15vh, 8em);
 }
 
 textarea {
     box-sizing: border-box;
-    width: 50vw;
+    width: min(90vw, 1000px);
     resize: none;
+    flex-grow: 1;
+    margin-bottom: 10px;
+    /* max-height: calc(100vh - 10px); */
 }
 
 .recording {
