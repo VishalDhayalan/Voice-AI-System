@@ -53,7 +53,8 @@ chat = RunnableWithMessageHistory(
 # Stream response from LLM for the user's transcript.
 async def get_response(user_socket: WebSocket):
     async for text in chat.astream({"query": users[user_socket].transcription}, {"configurable": {"user_socket": user_socket}}):
-        yield text
+        if text != "":
+            yield text
 
 app = FastAPI()
 
@@ -78,6 +79,7 @@ async def websocket_endpoint(websocket: WebSocket):
                 await websocket.send_text("<start>")
                 async for text in get_response(websocket):
                     await websocket.send_text(text)
+                await websocket.send_text("<end>")
                 # Clear the transcript
                 users[websocket].transcription = ""
             else:
