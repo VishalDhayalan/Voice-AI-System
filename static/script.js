@@ -2,7 +2,7 @@ const micButton = document.getElementById('micBtn');
 const micIcon = document.getElementById('micIcon');
 const transcriptionArea = document.getElementById('transcript');
 
-let ws = new WebSocket('wss://' + location.hostname + ':8888/speech-query');
+let ws = new WebSocket('wss://' + location.hostname + ':8888/query');
 let recording = false;
 
 function keepTranscriptInView() {
