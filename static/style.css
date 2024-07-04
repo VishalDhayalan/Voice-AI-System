@@ -33,11 +33,15 @@ body {
     font-size: min(15vw, 15vh, 8em);
 }
 
+#button {
+    background-color: #ccccff;
+}
+
 .controls {
     display: flex;
     align-items: center;
     justify-content: center;
-    gap: 50px;
+    gap: min(50px, 5vw);
 }
 
 .settings {

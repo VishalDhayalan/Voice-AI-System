@@ -79,6 +79,7 @@ async def websocket_endpoint(websocket: WebSocket):
                 await websocket.send_text("<start>")
                 async for text in get_response(websocket):
                     await websocket.send_text(text)
+                await websocket.send_text("<end>")
                 # Clear the transcript
                 users[websocket].transcription = ""
             else:
