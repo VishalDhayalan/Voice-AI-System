@@ -7,13 +7,13 @@ This project is an end-to-end voice-based conversational AI system consisting of
 The app transcribes and streams the user's query as it is being spoken. This query is sent to an LLM (GPT-3.5-turbo) and the response is streamed back from the LLM as it is being generated, via the app server to the frontend and rendered in real-time. The TTS synthesises the LLM response into speech as it is being streamed, thus giving a full end-to-end streaming-based voice AI system that is faster and provides a more intuitive conversational experience.
 
 ## Features
-:heavy_check_mark: End-to-end voice AI system (speech-in speech-out).
-:heavy_check_mark: Streaming STT transcription and streaming LLM response.
-:heavy_check_mark: Fully asynchronous and able to support multiple users and conversations on one server at the same time.
-:heavy_check_mark: Asynchronous real-time logging of each conversation session on the server (i.e. locally).
-:heavy_check_mark: Individually maintains memory of the entire conversation session throughout that session, enabling referring back to or recalling things said before in the conversation.
-:heavy_check_mark: Full conversation session transcript rendered in real-time.
-:heavy_check_mark: Ability to choose between a variety of voices and rates of speech!
+:heavy_check_mark: End-to-end voice AI system (speech-in speech-out).  
+:heavy_check_mark: Streaming STT transcription and streaming LLM response.  
+:heavy_check_mark: Fully asynchronous and able to support multiple users and conversations on one server at the same time.  
+:heavy_check_mark: Asynchronous real-time logging of each conversation session on the server (i.e. locally).  
+:heavy_check_mark: Individually maintains memory of the entire conversation session throughout that session, enabling referring back to or recalling things said before in the conversation.  
+:heavy_check_mark: Full conversation session transcript rendered in real-time.  
+:heavy_check_mark: Ability to choose between a variety of voices and rates of speech!  
 :heavy_check_mark: Stop speech synthesis of the LLM response at any point.
 
 ## Tested Platforms
