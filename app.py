@@ -5,6 +5,7 @@ import os
 import aiofiles
 from dotenv import load_dotenv
 import shortuuid
+import uvicorn
 from fastapi import FastAPI, WebSocket, WebSocketDisconnect
 from fastapi.responses import HTMLResponse
 from fastapi.staticfiles import StaticFiles
@@ -114,5 +115,4 @@ async def websocket_endpoint(websocket: WebSocket):
         del sessions[websocket]
 
 if __name__ == "__main__":
-    import uvicorn
-    uvicorn.run('app:app', host="0.0.0.0", port=8888, reload=True, ssl_keyfile="./key.pem", ssl_certfile="./cert.pem")
+    uvicorn.run('app:app', host="0.0.0.0", port=8888, ssl_keyfile="./key.pem", ssl_certfile="./cert.pem")
